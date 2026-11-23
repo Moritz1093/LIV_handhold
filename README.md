@@ -2,7 +2,7 @@
 
 > **Fork note (Moritz1093/LIV_handhold):** only `livox_ros_driver/` (Livox Avia, ROS 1) is changed. Everything
 > else (CAD, STM32 firmware, wiring, `mvs_ros_driver`, `livox_ros_driver2`) is unchanged from
-> [sheng00125/LIV_handhold](https://github.com/sheng00125/LIV_handhold) (commit `4567a05`).
+> [xuankuzcr/LIV_handhold](https://github.com/xuankuzcr/LIV_handhold) (commit `4567a05`).
 >
 > Changes to the `timeshare` shared memory (16 bytes `{int64 high; int64 low;}`, layout unchanged):
 > - `low` = LiDAR/MCU time of the frame start, as before; **`high` = host time** (ns) of the write, used by a camera
