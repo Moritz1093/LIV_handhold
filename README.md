@@ -15,7 +15,8 @@
 >   first frame is published
 > - Check for an empty `user_config_path` in `lds_lidar.cpp`
 >
-> Still compatible with the original `mvs_ros_driver` (it only reads `low`). Hardware time sync (STM32, PPS/GPRMC,
+> Used by the Huateng camera driver [Moritz1093/huateng_camera_ros](https://github.com/Moritz1093/huateng_camera_ros)
+> (ROS 1/ROS 2, `TimeSource: LiDAR`). Still compatible with the original `mvs_ros_driver` (it only reads `low`). Hardware time sync (STM32, PPS/GPRMC,
 > camera trigger) as described below is required.
 
 ### News
