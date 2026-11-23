@@ -29,10 +29,7 @@
 #include <string.h>
 #include <time.h>
 #include <chrono>
-struct time_stamp {
-  int64_t high;
-  int64_t low;
-};
+#include "timeshare.h"
 extern struct time_stamp *pointt;
 namespace livox_ros {
 

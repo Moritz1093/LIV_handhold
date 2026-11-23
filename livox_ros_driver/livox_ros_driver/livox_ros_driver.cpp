@@ -46,11 +46,10 @@ inline void SignalHandler(int signum) {
   exit(signum);
 }
 
-struct time_stamp {
-  int64_t high;
-  int64_t low;
-};
-struct time_stamp *pointt;
+#include <fcntl.h>
+#include <sys/mman.h>
+#include "timeshare.h"
+struct time_stamp *pointt = nullptr;
 #define ERR_EXIT(m)                                                            \
   do {                                                                         \
     perror(m);                                                                 \
@@ -94,19 +93,31 @@ int main(int argc, char **argv) {
   livox_node.getParam("frame_id", frame_id);
   livox_node.getParam("enable_lidar_bag", lidar_bag);
   livox_node.getParam("enable_imu_bag", imu_bag);
-  const char *user_name = getlogin();
-  std::string path_for_time_stamp = "/home/" + std::string(user_name) + "/timeshare";
+  // Shared memory for the camera driver (see timeshare.h).
+  // Default path as upstream ($HOME/timeshare, read by mvs_ros_driver); override with parameter "timeshare_path".
+  // getlogin() is not used: it returns NULL without a terminal (e.g. in Docker or systemd).
+  // No O_TRUNC: a camera driver that has already mapped the file would otherwise get SIGBUS.
+  const char *home = getenv("HOME");
+  std::string path_for_time_stamp;
+  livox_node.param<std::string>("timeshare_path", path_for_time_stamp,
+                                std::string(home ? home : "/tmp") + "/timeshare");
   const char *shared_file_name = path_for_time_stamp.c_str();
-  int fd = open(shared_file_name, O_CREAT | O_RDWR | O_TRUNC, 0666);
+  int fd = open(shared_file_name, O_CREAT | O_RDWR, 0666);
   if (fd == -1) {
     ERR_EXIT("open");
-  } else {
-    printf("open code: %d\n", fd);
   }
-  lseek(fd, sizeof(time_stamp) * 1, SEEK_SET);
-  write(fd, "", 1);
+  if (ftruncate(fd, sizeof(time_stamp)) != 0) {
+    ERR_EXIT("ftruncate");
+  }
   pointt = (time_stamp *)mmap(NULL, sizeof(time_stamp) * 1,
                               PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (pointt == MAP_FAILED) {
+    ROS_ERROR("mmap of %s failed, the camera driver gets no LiDAR time", shared_file_name);
+    pointt = nullptr;
+  } else {
+    timeshare_clear(pointt);  // invalid until the first frame is published
+    ROS_INFO("timeshare: %s", shared_file_name);
+  }
 
   if (publish_freq > 100.0) {
     publish_freq = 100.0;

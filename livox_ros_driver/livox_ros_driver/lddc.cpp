@@ -39,12 +39,16 @@
 #include <livox_ros_driver/CustomMsg.h>
 #include <livox_ros_driver/CustomPoint.h>
 
-// time_stamp ;
-struct time_stamp {
-  int64_t high;
-  int64_t low;
-};
+#include "timeshare.h"
+
+// Shared memory for the camera driver (see timeshare.h), created in livox_ros_driver.cpp
 extern struct time_stamp *pointt;
+
+// Store the start of the frame being published (LiDAR/MCU time) plus the current host time for the camera driver.
+// Called for all three output formats (upstream: only CustomMsg, xfer_format 1).
+static inline void ShareFrameStartTime(uint64_t frame_start_ns) {
+  timeshare_write(pointt, (int64_t)frame_start_ns, (int64_t)ros::Time::now().toNSec());
+}
 namespace livox_ros {
 #define ERR_EXIT(m)                                                            \
   do {                                                                         \
@@ -212,6 +216,7 @@ uint32_t Lddc::PublishPointcloud2(LidarDataQueue *queue, uint32_t packet_num,
     /** Use the first packet timestamp as pointcloud2 msg timestamp */
     if (!published_packet) {
       cloud.header.stamp = ros::Time(timestamp / 1000000000.0);
+      ShareFrameStartTime(timestamp);
     }
     uint32_t single_point_num = storage_packet.point_num * echo_num;
 
@@ -317,6 +322,7 @@ uint32_t Lddc::PublishPointcloudData(LidarDataQueue *queue, uint32_t packet_num,
     }
     if (!published_packet) {
       cloud->header.stamp = timestamp / 1000.0; // to pcl ros time stamp
+      ShareFrameStartTime(timestamp);
     }
     uint32_t single_point_num = storage_packet.point_num * echo_num;
 
@@ -435,7 +441,7 @@ uint32_t Lddc::PublishCustomPointcloud(LidarDataQueue *queue,
     if (!published_packet) {
       livox_msg.timebase = timestamp;
       packet_offset_time = 0;
-      pointt->low = timestamp;      
+      ShareFrameStartTime(timestamp);
       /** convert to ros time stamp */
       livox_msg.header.stamp =
           ros::Time(timestamp / 1000000000.0);

@@ -1,5 +1,23 @@
 # [LiDAR_Inertial_Visual_Handhold](https://zhuanlan.zhihu.com/p/670136001)
 
+> **Fork note (Moritz1093/LIV_handhold):** only `livox_ros_driver/` (Livox Avia, ROS 1) is changed. Everything
+> else (CAD, STM32 firmware, wiring, `mvs_ros_driver`, `livox_ros_driver2`) is unchanged from
+> [sheng00125/LIV_handhold](https://github.com/sheng00125/LIV_handhold) (commit `4567a05`).
+>
+> Changes to the `timeshare` shared memory (16 bytes `{int64 high; int64 low;}`, layout unchanged):
+> - `low` = LiDAR/MCU time of the frame start, as before; **`high` = host time** (ns) of the write, used by a camera
+>   driver to estimate the host ↔ LiDAR clock offset. Written as a seqlock (`high` = 0 while writing), see
+>   `livox_ros_driver/livox_ros_driver/timeshare.h`
+> - Written for **all `xfer_format`s** (upstream: only CustomMsg), so PointCloud2 recordings get synced images too
+> - Path configurable with the ROS parameter **`timeshare_path`** (default as upstream: `$HOME/timeshare`;
+>   `getlogin()` is no longer used, it fails in Docker/systemd)
+> - No `O_TRUNC` on open (a reader that already mapped the file would get SIGBUS), file is cleared until the
+>   first frame is published
+> - Check for an empty `user_config_path` in `lds_lidar.cpp`
+>
+> Still compatible with the original `mvs_ros_driver` (it only reads `low`). Hardware time sync (STM32, PPS/GPRMC,
+> camera trigger) as described below is required.
+
 ### News
 * **Apr. 04, 2025** - Add support for multiple cameras.
 * **Mar. 24, 2025** - Open-sourced the UAV platform with hard-sync LIV sensors used in [FAST-LIVO2](https://github.com/hku-mars/FAST-LIVO2). 🎉

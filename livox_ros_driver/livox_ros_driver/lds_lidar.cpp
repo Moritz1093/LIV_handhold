@@ -85,6 +85,12 @@ int LdsLidar::InitLdsLidar(std::vector<std::string> &broadcast_code_strs,
     AddBroadcastCodeToWhitelist(input_str.c_str());
   }
 // 这解析 config文件，并且设置一下串口
+  if (user_config_path == nullptr || strlen(user_config_path) == 0) {
+    printf("User config path is NULL or empty!\n");
+    return -1;
+  }
+
+  printf("Loading config file from: %s\n", user_config_path);
   ParseConfigFile(user_config_path);
 
   if (whitelist_count_) {
