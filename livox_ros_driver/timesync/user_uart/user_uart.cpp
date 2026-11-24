@@ -31,6 +31,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <chrono>
+
 namespace livox_ros {
 
 UserUart::UserUart(uint8_t baudrate_index, uint8_t parity)
@@ -53,7 +55,15 @@ UserUart::~UserUart() {
 int UserUart::Open(const char *filename) {
   fd_ = open(filename, O_RDWR | O_NOCTTY);  //| O_NDELAY
   if (fd_ < 0) {
-    printf("Open %s fail!\n", filename);
+    // The time sync state machine retries every 50 ms while the device is missing: log at most every 10 s
+    static std::chrono::steady_clock::time_point last_log;
+    static unsigned long failed = 0;
+    ++failed;
+    const auto now = std::chrono::steady_clock::now();
+    if (failed == 1 || now - last_log > std::chrono::seconds(10)) {
+      printf("Open %s fail! (%lu attempts, retrying)\n", filename, failed);
+      last_log = now;
+    }
     return -1;
   } else {
     chmod(filename, S_IRWXU | S_IRWXG | S_IRWXO); /* need add here */
